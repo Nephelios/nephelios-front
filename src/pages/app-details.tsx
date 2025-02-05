@@ -1,0 +1,189 @@
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeftIcon,
+  GitHubLogoIcon,
+  GlobeIcon,
+} from "@radix-ui/react-icons";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+import { Button } from "@/components/ui/button";
+
+const mockMetrics = Array.from({ length: 24 }, (_, i) => ({
+  time: `${i}:00`,
+  cpu: Math.random() * 100,
+  memory: Math.random() * 100,
+  network: Math.random() * 1000,
+}));
+
+const app = {
+  id: "1",
+  name: "landy",
+  type: "nodejs",
+  url: "https://landy.nephelios.dev",
+  githubUrl: "https://github.com/Adrinlol/landy-react-template",
+  status: "running",
+  lastDeployed: "2024-03-20T10:00:00Z",
+};
+
+export default function AppDetails() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  return (
+    <div className="container mx-auto py-10 px-10">
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center justify-between">
+              {app.name}{" "}
+              <Button
+                onClick={() => navigate(-1)}
+                className="flex items-center"
+              >
+                <ArrowLeftIcon className="mr-2" /> Back
+              </Button>
+            </CardTitle>
+            <CardDescription>Application Details</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <GlobeIcon className="h-4 w-4 text-muted-foreground" />
+                  <a
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    {app.url}
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GitHubLogoIcon className="h-4 w-4 text-muted-foreground" />
+                  <a
+                    href={app.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    View Repository
+                  </a>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="font-medium">{app.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      app.status === "running"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                    }`}
+                  >
+                    {app.status}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Last Deployed:</span>
+                  <span className="font-medium">
+                    {new Date(app.lastDeployed).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Metrics</CardTitle>
+            <CardDescription>
+              Real-time performance metrics for your application
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="cpu" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="cpu">CPU Usage</TabsTrigger>
+                <TabsTrigger value="memory">Memory Usage</TabsTrigger>
+                <TabsTrigger value="network">Network Load</TabsTrigger>
+              </TabsList>
+              <TabsContent value="cpu" className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mockMetrics}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis unit="%" />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="cpu"
+                      stroke="hsl(var(--chart-1))"
+                      name="CPU Usage"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </TabsContent>
+              <TabsContent value="memory" className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mockMetrics}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis unit="%" />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="memory"
+                      stroke="hsl(var(--chart-2))"
+                      name="Memory Usage"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </TabsContent>
+              <TabsContent value="network" className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mockMetrics}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis unit="KB/s" />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="network"
+                      stroke="hsl(var(--chart-3))"
+                      name="Network Load"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
