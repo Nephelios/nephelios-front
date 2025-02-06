@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { EyeOpenIcon, GitHubLogoIcon, GlobeIcon } from "@radix-ui/react-icons";
+import { GitHubLogoIcon, GlobeIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,23 +8,67 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import ServerNotFound from "@/components/ui/ServerNotFound";
 
-// Mock data - replace with actual data from your backend
-const apps = [
-  {
-    id: "1",
-    name: "landy",
-    type: "nodejs",
-    url: "https://landy.nephelios.dev",
-    githubUrl: "https://github.com/Adrinlol/landy-react-template",
-    status: "running",
-    lastDeployed: "2024-03-20T10:00:00Z",
-  },
-  // Add more mock apps as needed
-];
+// Define the type for the app data
+export interface App {
+  container_id: string;
+  app_name: string;
+  app_type: string;
+  domain: string;
+  github_url: string;
+  status: string;
+  created_at: string;
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [apps, setApps] = useState<App[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const backendUrl =
+      process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
+    const backendPort = process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+
+    const url = `${backendUrl}:${backendPort}/get-apps`;
+
+    const fetchApps = async () => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("Failed to fetch apps");
+        }
+        const data = await response.json();
+
+        if (!Array.isArray(data.apps)) {
+          throw new Error("Fetched data is not an array");
+        }
+
+        setApps(data.apps);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApps();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <ServerNotFound />;
+  }
 
   return (
     <div className="container mx-auto py-10 px-10">
@@ -43,33 +87,36 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {apps.map((app) => (
           <Card
-            key={app.id}
-            className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => navigate(`/apps/${app.id}`)}
+            key={app.container_id}
+            className="hover:shadow-lg cursor-pointer"
+            onClick={() =>
+              navigate(`/apps/${app.container_id}`, { state: app })
+            }
+            allowPress={true}
           >
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center justify-between">
-                <span>{app.name}</span>
+                <span>{app.app_name}</span>
               </CardTitle>
-              <CardDescription>{app.type}</CardDescription>
+              <CardDescription>{app.app_type}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <GlobeIcon className="h-4 w-4 text-muted-foreground" />
                   <a
-                    href={app.url}
+                    href={`https://${app.domain}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm hover:underline"
                   >
-                    {app.url}
+                    {app.domain}
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
                   <GitHubLogoIcon className="h-4 w-4 text-muted-foreground" />
                   <a
-                    href={app.githubUrl}
+                    href={app.github_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm hover:underline"
@@ -88,8 +135,7 @@ export default function Dashboard() {
                     {app.status}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    Last deployed:{" "}
-                    {new Date(app.lastDeployed).toLocaleDateString()}
+                    Created at: {new Date(app.created_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>

@@ -34,8 +34,8 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="border-b h-16 bg-background shadow-sm">
+        <div className="container px-4 h-16 flex items-center justify-between">
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => navigate("/")}
@@ -45,7 +45,9 @@ function Layout({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
         </div>
       </header>
-      <main>{children}</main>
+      <main className="container mx-auto py-10 px-4 h-full w-full">
+        {children}
+      </main>
     </div>
   );
 }

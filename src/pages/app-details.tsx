@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeftIcon,
   GitHubLogoIcon,
@@ -23,6 +23,7 @@ import {
   Legend,
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import ServerNotFound from "@/components/ui/ServerNotFound";
 
 const mockMetrics = Array.from({ length: 24 }, (_, i) => ({
   time: `${i}:00`,
@@ -31,27 +32,26 @@ const mockMetrics = Array.from({ length: 24 }, (_, i) => ({
   network: Math.random() * 1000,
 }));
 
-const app = {
-  id: "1",
-  name: "landy",
-  type: "nodejs",
-  url: "https://landy.nephelios.dev",
-  githubUrl: "https://github.com/Adrinlol/landy-react-template",
-  status: "running",
-  lastDeployed: "2024-03-20T10:00:00Z",
-};
-
 export default function AppDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Access the app data from the location state
+  const app = location.state; // This will contain the app data passed from the Dashboard
+
+  // If app is not found in state, you might want to handle it gracefully
+  if (!app) {
+    return <ServerNotFound />;
+  }
 
   return (
     <div className="container mx-auto py-10 px-10">
       <div className="grid gap-6">
-        <Card>
+        <Card allowPress={false}>
           <CardHeader>
             <CardTitle className="text-2xl flex items-center justify-between">
-              {app.name}{" "}
+              {app.app_name}{" "}
               <Button
                 onClick={() => navigate(-1)}
                 className="flex items-center"
@@ -67,18 +67,18 @@ export default function AppDetails() {
                 <div className="flex items-center gap-2">
                   <GlobeIcon className="h-4 w-4 text-muted-foreground" />
                   <a
-                    href={app.url}
+                    href={`https://${app.domain}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:underline"
                   >
-                    {app.url}
+                    {app.domain}
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
                   <GitHubLogoIcon className="h-4 w-4 text-muted-foreground" />
                   <a
-                    href={app.githubUrl}
+                    href={app.github_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:underline"
@@ -90,7 +90,7 @@ export default function AppDetails() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Type:</span>
-                  <span className="font-medium">{app.type}</span>
+                  <span className="font-medium">{app.app_type}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
@@ -107,7 +107,7 @@ export default function AppDetails() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Last Deployed:</span>
                   <span className="font-medium">
-                    {new Date(app.lastDeployed).toLocaleDateString()}
+                    {new Date(app.created_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>
