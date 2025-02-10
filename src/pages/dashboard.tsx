@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { GitHubLogoIcon, GlobeIcon } from "@radix-ui/react-icons";
+import { GitHubLogoIcon, GlobeIcon, RocketIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -68,6 +68,35 @@ export default function Dashboard() {
 
   if (error) {
     return <ServerNotFound />;
+  }
+
+  if (apps.length === 0) {
+    return (
+      <div className="container mx-auto h-[80vh] flex flex-col items-center justify-center px-4">
+        <div className="max-w-2xl mx-auto text-center space-y-8">
+          <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto">
+            <RocketIcon className="w-12 h-12 text-primary" />
+          </div>
+
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight">
+              Welcome to Nephelios
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Your modern cloud platform for seamless application deployment.
+              Get started by deploying your first application.
+            </p>
+          </div>
+
+          <Button size="lg" asChild className="mt-8">
+            <Link to="/create" className="flex items-center gap-2">
+              <RocketIcon className="w-4 h-4" />
+              Deploy Your First App
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

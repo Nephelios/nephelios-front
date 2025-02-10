@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   ArrowLeftIcon,
   GitHubLogoIcon,
@@ -25,22 +26,40 @@ import {
 import { Button } from "@/components/ui/button";
 import ServerNotFound from "@/components/ui/ServerNotFound";
 
-const mockMetrics = Array.from({ length: 24 }, (_, i) => ({
-  time: `${i}:00`,
-  cpu: Math.random() * 100,
-  memory: Math.random() * 100,
-  network: Math.random() * 1000,
-}));
+const generateMockMetrics = () =>
+  Array.from({ length: 24 }, (_, i) => ({
+    time: `${i}:00`,
+    cpu: Math.random() * 100,
+    memory: Math.random() * 100,
+    network: Math.random() * 1000,
+  }));
 
 export default function AppDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const app = location.state;
 
-  // Access the app data from the location state
-  const app = location.state; // This will contain the app data passed from the Dashboard
+  const [metrics, setMetrics] = useState(generateMockMetrics);
 
-  // If app is not found in state, you might want to handle it gracefully
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMetrics((prevMetrics) => {
+        const newMetrics = [...prevMetrics];
+        newMetrics.push({
+          time: `${newMetrics.length - 1}:00`,
+          cpu: Math.random() * 100,
+          memory: Math.random() * 100,
+          network: Math.random() * 1000,
+        });
+        newMetrics.shift();
+        return newMetrics;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (!app) {
     return <ServerNotFound />;
   }
@@ -87,30 +106,6 @@ export default function AppDetails() {
                   </a>
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Type:</span>
-                  <span className="font-medium">{app.app_type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      app.status === "running"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                    }`}
-                  >
-                    {app.status}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Deployed:</span>
-                  <span className="font-medium">
-                    {new Date(app.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -131,7 +126,7 @@ export default function AppDetails() {
               </TabsList>
               <TabsContent value="cpu" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockMetrics}>
+                  <LineChart data={metrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis unit="%" />
@@ -148,7 +143,7 @@ export default function AppDetails() {
               </TabsContent>
               <TabsContent value="memory" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockMetrics}>
+                  <LineChart data={metrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis unit="%" />
@@ -165,7 +160,7 @@ export default function AppDetails() {
               </TabsContent>
               <TabsContent value="network" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockMetrics}>
+                  <LineChart data={metrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis unit="KB/s" />

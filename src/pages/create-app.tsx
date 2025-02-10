@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { GitHubLogoIcon, GlobeIcon, RocketIcon } from "@radix-ui/react-icons";
+import {
+  GitHubLogoIcon,
+  GlobeIcon,
+  RocketIcon,
+  CheckIcon,
+} from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,9 +35,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import ServerNotFound from "@/components/ui/ServerNotFound";
-import FallingConfetti from "@/components/ui/FallingConfetti";
+import Confetti from "react-confetti";
+import "ldrs/ring";
+import { Progress } from "@/components/ui/progress";
 
-// Regular expression for valid Docker image names
 const dockerImageNameRegex = /^[a-z0-9._-]+$/;
 
 const formSchema = z.object({
@@ -46,13 +52,17 @@ const formSchema = z.object({
   app_type: z.string().nonempty("Application type is required"),
   github_url: z.string().url("Invalid GitHub URL"),
 });
+import "ldrs/ring";
+import "ldrs/leapfrog";
 
 export default function CreateApp() {
   const { toast } = useToast();
   const [isDeploying, setIsDeploying] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [appData, setAppData] = useState<any>(null); // State to hold app data
+  const [appData, setAppData] = useState<any>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  const [visibleSteps, setVisibleSteps] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -109,13 +119,13 @@ export default function CreateApp() {
       );
 
       if (createdApp) {
-        setAppData(createdApp); // Store the created app data
+        setTimeout(() => {
+          setVisibleSteps([]);
+          setCompletedSteps(new Set());
+          setAppData(createdApp);
+          setShowConfetti(true);
+        }, 2000);
       }
-
-      // Set a timer to hide confetti after 4 seconds
-      setTimeout(() => {
-        setShowConfetti(false);
-      }, 4000);
     } catch (error) {
       if (error instanceof Error) {
         toast({
@@ -125,9 +135,45 @@ export default function CreateApp() {
         });
       }
     } finally {
-      setIsDeploying(false);
+      setTimeout(() => {
+        setVisibleSteps([]);
+        setCompletedSteps(new Set());
+        setIsDeploying(false);
+      }, 2000);
     }
   }
+
+  useEffect(() => {
+    const backendUrl =
+      process.env.REACT_APP_NEPHELIOS_BACKEND_WEBSOCKET_URL || "localhost";
+    const backendPort = process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+    const wsUrl = `ws://${backendUrl}:${backendPort}/ws`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => console.log("WebSocket connected");
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log("WebSocket message received:", message);
+
+      if (message.status === "in_progress") {
+        setVisibleSteps((prev) => [...prev, message.step]);
+      } else if (message.status === "success") {
+        setCompletedSteps((prev) => new Set(prev.add(message.step)));
+      }
+    };
+
+    ws.onclose = () => console.log("WebSocket   disconnected");
+    ws.onerror = (error) => console.error("WebSocket error:", error);
+
+    return () => {};
+  }, []);
+
+  const deploymentSteps = [
+    "Cloning repository",
+    "Building Docker image",
+    "Starting deployment",
+  ];
 
   return (
     <div className="container mx-auto py-10">
@@ -138,16 +184,58 @@ export default function CreateApp() {
           {isDeploying ? (
             <div className="flex flex-col items-center justify-center">
               <h2 className="text-2xl font-bold">
-                Deploying your application...
+                Deploying {form.getValues("app_name")} application 🚀
+                <Progress
+                  className="mt-3"
+                  value={(completedSteps.size / 3) * 100}
+                  max={100}
+                />
               </h2>
-              <div className="loader mt-4">
-                <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-600"></div>
+
+              <div className="mt-8 space-y-4 flex flex-col">
+                {deploymentSteps.map((step, index) =>
+                  visibleSteps.includes(step) ? (
+                    <div key={index} className="flex items-center">
+                      <div className="flex items-center">
+                        <div className="mr-2">
+                          {completedSteps.has(step) ? (
+                            <CheckIcon className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <l-ring
+                              size="15"
+                              stroke="2"
+                              bg-opacity="0"
+                              speed="2"
+                              color="black"
+                            ></l-ring>
+                          )}
+                        </div>
+                        <span
+                          className={`transition-colors duration-500 ${
+                            completedSteps.has(step)
+                              ? "text-gray-400"
+                              : "text-black font-bold"
+                          }`}
+                        >
+                          {step}
+                        </span>
+                      </div>
+                    </div>
+                  ) : null
+                )}
               </div>
             </div>
           ) : (
             <>
-              {showConfetti && <FallingConfetti />}
-              {appData ? ( // Show recap card if appData is available
+              {showConfetti && (
+                <Confetti
+                  width={window.innerWidth}
+                  height={window.innerHeight}
+                  numberOfPieces={200}
+                  recycle={false}
+                />
+              )}
+              {appData ? (
                 <Card className="max-w-2xl mx-auto mb-4" allowPress={false}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
