@@ -1,9 +1,11 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { z } from "zod";
 import {
   ArrowLeftIcon,
   GitHubLogoIcon,
   GlobeIcon,
+  TrashIcon,
 } from "@radix-ui/react-icons";
 import {
   Card,
@@ -24,7 +26,24 @@ import {
   Legend,
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import ServerNotFound from "@/components/ui/ServerNotFound";
+import "ldrs/ring";
+
+const Loader = () => (
+  <div className="w-4 h-4 border-2 border-t-2 border-blue-500 rounded-full animate-spin"></div>
+);
 
 const generateMockMetrics = () =>
   Array.from({ length: 24 }, (_, i) => ({
@@ -41,6 +60,18 @@ export default function AppDetails() {
   const app = location.state;
 
   const [metrics, setMetrics] = useState(generateMockMetrics);
+  const [confirmAppName, setConfirmAppName] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const appNameSchema = z.object({
+    confirmAppName: z
+      .string()
+      .nonempty("App name is required for confirmation")
+      .refine((value) => value === app.app_name, {
+        message: "App name does not match. Deletion aborted.",
+      }),
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,6 +91,43 @@ export default function AppDetails() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleDelete = async (e: any) => {
+    e.preventDefault();
+
+    const result = appNameSchema.safeParse({ confirmAppName });
+    if (result.success) {
+      setIsLoading(true);
+
+      const backendUrl =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
+      const backendPort =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+      const url = `${backendUrl}:${backendPort}/remove`;
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ app_name: app.app_name }),
+        });
+
+        if (response.ok) {
+          navigate("/");
+        } else {
+          setValidationError("An error occurred while deleting the app.");
+        }
+      } catch (error) {
+        setValidationError("An error occurred while deleting the app.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setValidationError(result.error.errors[0].message);
+    }
+  };
+
   if (!app) {
     return <ServerNotFound />;
   }
@@ -70,13 +138,70 @@ export default function AppDetails() {
         <Card allowPress={false}>
           <CardHeader>
             <CardTitle className="text-2xl flex items-center justify-between">
-              {app.app_name}{" "}
-              <Button
-                onClick={() => navigate(-1)}
-                className="flex items-center"
-              >
-                <ArrowLeftIcon className="mr-2" /> Back
-              </Button>
+              <div className="flex items-center space-x-2">
+                <span className="font-bold mr-2">{app.app_name}</span>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant={"destructive"} size={"sm"}>
+                      <TrashIcon width={20} height={20} />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently
+                        delete the <strong>{app.app_name}</strong> application.
+                      </AlertDialogDescription>
+                      <Input
+                        placeholder={`Type "${app.app_name}" to confirm`}
+                        value={confirmAppName}
+                        onChange={(e) => setConfirmAppName(e.target.value)}
+                        className="mt-4"
+                      />
+                      {validationError && (
+                        <p className="text-red-500 text-sm mt-2">
+                          {validationError}
+                        </p>
+                      )}
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setConfirmAppName("")}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        disabled={confirmAppName !== app.app_name || isLoading}
+                        className="bg-red-500 hover:bg-red-600"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center">
+                            <l-ring
+                              size="15"
+                              stroke="2"
+                              bg-opacity="0"
+                              speed="2"
+                              color="black"
+                            ></l-ring>
+                          </div>
+                        ) : (
+                          "Delete"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center"
+                >
+                  <ArrowLeftIcon className="mr-2" /> Back
+                </Button>
+              </div>
             </CardTitle>
             <CardDescription>Application Details</CardDescription>
           </CardHeader>
