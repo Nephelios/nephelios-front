@@ -106,6 +106,30 @@ export default function AppDetails() {
                   </a>
                 </div>
               </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Type:</span>
+                  <span className="font-medium">{app.app_type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      app.status === "running"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                    }`}
+                  >
+                    {app.status}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Last Deployed:</span>
+                  <span className="font-medium">
+                    {new Date(app.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
