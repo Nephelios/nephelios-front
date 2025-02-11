@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   ArrowLeftIcon,
   GitHubLogoIcon,
@@ -25,22 +26,40 @@ import {
 import { Button } from "@/components/ui/button";
 import ServerNotFound from "@/components/ui/ServerNotFound";
 
-const mockMetrics = Array.from({ length: 24 }, (_, i) => ({
-  time: `${i}:00`,
-  cpu: Math.random() * 100,
-  memory: Math.random() * 100,
-  network: Math.random() * 1000,
-}));
+const generateMockMetrics = () =>
+  Array.from({ length: 24 }, (_, i) => ({
+    time: `${i}:00`,
+    cpu: Math.random() * 100,
+    memory: Math.random() * 100,
+    network: Math.random() * 1000,
+  }));
 
 export default function AppDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const app = location.state;
 
-  // Access the app data from the location state
-  const app = location.state; // This will contain the app data passed from the Dashboard
+  const [metrics, setMetrics] = useState(generateMockMetrics);
 
-  // If app is not found in state, you might want to handle it gracefully
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMetrics((prevMetrics) => {
+        const newMetrics = [...prevMetrics];
+        newMetrics.push({
+          time: `${newMetrics.length - 1}:00`,
+          cpu: Math.random() * 100,
+          memory: Math.random() * 100,
+          network: Math.random() * 1000,
+        });
+        newMetrics.shift();
+        return newMetrics;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (!app) {
     return <ServerNotFound />;
   }
@@ -131,7 +150,7 @@ export default function AppDetails() {
               </TabsList>
               <TabsContent value="cpu" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockMetrics}>
+                  <LineChart data={metrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis unit="%" />
@@ -148,7 +167,7 @@ export default function AppDetails() {
               </TabsContent>
               <TabsContent value="memory" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockMetrics}>
+                  <LineChart data={metrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis unit="%" />
@@ -165,7 +184,7 @@ export default function AppDetails() {
               </TabsContent>
               <TabsContent value="network" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockMetrics}>
+                  <LineChart data={metrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis unit="KB/s" />
