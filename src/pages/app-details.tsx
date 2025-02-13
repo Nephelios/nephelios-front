@@ -45,21 +45,13 @@ const Loader = () => (
   <div className="w-4 h-4 border-2 border-t-2 border-blue-500 rounded-full animate-spin"></div>
 );
 
-const generateMockMetrics = () =>
-  Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`,
-    cpu: Math.random() * 100,
-    memory: Math.random() * 100,
-    network: Math.random() * 1000,
-  }));
-
 export default function AppDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const app = location.state;
 
-  const [metrics, setMetrics] = useState(generateMockMetrics);
+  const [metrics, setMetrics] = useState([]);
   const [confirmAppName, setConfirmAppName] = useState("");
   const [validationError, setValidationError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -74,24 +66,39 @@ export default function AppDetails() {
   });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMetrics((prevMetrics) => {
-        const newMetrics = [...prevMetrics];
-        newMetrics.push({
-          time: `${newMetrics.length - 1}:00`,
-          cpu: Math.random() * 100,
-          memory: Math.random() * 100,
-          network: Math.random() * 1000,
+    const fetchMetrics = async () => {
+      const backendUrl =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://127.0.0.1";
+      const backendPort =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+      const url = `${backendUrl}:${backendPort}/get-metrics`;
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ app_name: app.app_name }),
         });
-        newMetrics.shift();
-        return newMetrics;
-      });
-    }, 5000);
+
+        if (response.ok) {
+          const data = await response.json();
+          setMetrics(data);
+        } else {
+          console.error("Failed to fetch metrics");
+        }
+      } catch (error) {
+        console.error("Error fetching metrics:", error);
+      }
+    };
+
+    const interval = setInterval(fetchMetrics, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [app.app_name]);
 
-  const handleDelete = async (e: any) => {
+  const handleDelete = async (e) => {
     e.preventDefault();
 
     const result = appNameSchema.safeParse({ confirmAppName });
