@@ -114,18 +114,6 @@ export default function CreateApp() {
       }
 
       const appsData = await appsResponse.json();
-      const createdApp = appsData.apps.find(
-        (app: any) => app.app_name === values.app_name
-      );
-
-      if (createdApp) {
-        setTimeout(() => {
-          setVisibleSteps([]);
-          setCompletedSteps(new Set());
-          setAppData(createdApp);
-          setShowConfetti(true);
-        }, 2000);
-      }
     } catch (error) {
       if (error instanceof Error) {
         toast({
@@ -134,12 +122,6 @@ export default function CreateApp() {
           variant: "destructive",
         });
       }
-    } finally {
-      setTimeout(() => {
-        setVisibleSteps([]);
-        setCompletedSteps(new Set());
-        setIsDeploying(false);
-      }, 2000);
     }
   }
 
@@ -160,8 +142,21 @@ export default function CreateApp() {
         setVisibleSteps((prev) => [...prev, message.step]);
       } else if (message.status === "success") {
         setCompletedSteps((prev) => new Set(prev.add(message.step)));
+
+      } else if (message.status === "deployed" && message.step === "deployed_info") {
+        setTimeout(() => {
+          ws.close();
+          setVisibleSteps([]);
+          setCompletedSteps(new Set());
+          setAppData(message.app_deployed);
+          console.log(message.app_deployed)
+          setShowConfetti(true);
+          setIsDeploying(false);
+        }, 2000);
+
+
       }
-    };
+    }
 
     ws.onclose = () => console.log("WebSocket   disconnected");
     ws.onerror = (error) => console.error("WebSocket error:", error);

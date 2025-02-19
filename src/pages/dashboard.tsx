@@ -28,37 +28,37 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const backendUrl =
+  const backendUrl =
       process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
-    const backendPort = process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+  const backendPort = process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
 
-    const url = `${backendUrl}:${backendPort}/get-apps`;
+  const url = `${backendUrl}:${backendPort}/get-apps`;
 
-    const fetchApps = async () => {
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error("Failed to fetch apps");
-        }
-        const data = await response.json();
-
-        if (!Array.isArray(data.apps)) {
-          throw new Error("Fetched data is not an array");
-        }
-
-        setApps(data.apps);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("An unknown error occurred");
-        }
-      } finally {
-        setLoading(false);
+  const fetchApps = async () => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch apps");
       }
-    };
+      const data = await response.json();
 
+      if (!Array.isArray(data.apps)) {
+        throw new Error("Fetched data is not an array");
+      }
+
+      setApps(data.apps);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchApps();
   }, []);
 
