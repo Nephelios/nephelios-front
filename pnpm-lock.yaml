@@ -202,7 +202,7 @@ importers:
         specifier: ^8.7.0
         version: 8.23.0(eslint@9.19.0(jiti@1.21.7))(typescript@5.7.3)
       vite:
-        specifier: ^5.4.8
+        specifier: ^5.4.14
         version: 5.4.14(@types/node@22.13.1)
 
 packages:
