@@ -20,6 +20,7 @@ export interface App {
   github_url: string;
   status: string;
   created_at: string;
+  swarm_task_name: string;
 }
 
 export default function Dashboard() {
