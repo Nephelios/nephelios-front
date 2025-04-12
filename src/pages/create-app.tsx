@@ -450,7 +450,7 @@ export default function CreateApp() {
                                 className={`h-4 w-4 transform transition-transform duration-300 ${isBuildSettingsOpen ? "rotate-180" : ""
                                   }`}
                               />
-                              Install and Start Settings
+                              Advanced Build Settings
                             </div>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="px-4 pb-4 pt-0 space-y-4 transition-transform duration-300 transform">
