@@ -33,7 +33,7 @@ export default function Monitor() {
 
                 </CardHeader>
                 <CardContent>
-                    <iframe src="http://localhost:3000/d-solo/aLuzOYANk/nephelios-backend??orgId=1&refresh=5s&panelId=2&theme=light&panelId=2" width="650" height="350" frameborder="0" className="mb-4"></iframe>
+                    <iframe src="http://localhost:3000/d-solo/aLuzOYANk/nephelios-backend?orgId=1&refresh=5s&panelId=2&theme=light" width="650" height="350" frameborder="0" className="mb-4"></iframe>
 
 
                 </CardContent>
