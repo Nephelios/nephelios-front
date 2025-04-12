@@ -29,7 +29,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   const backendUrl =
-      process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
+    process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
   const backendPort = process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
 
   const url = `${backendUrl}:${backendPort}/get-apps`;
@@ -119,7 +119,7 @@ export default function Dashboard() {
             key={app.container_id}
             className="hover:shadow-lg cursor-pointer"
             onClick={() =>
-              navigate(`/apps/${app.container_id}`, { state: app })
+              navigate(`/apps/${app.swarm_task_name}`, { state: app })
             }
             allowPress={true}
           >
@@ -155,11 +155,10 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <div
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      app.status === "running"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                    }`}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.status === "running"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                      }`}
                   >
                     {app.status}
                   </div>
@@ -172,6 +171,6 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
-    </div>
+    </div >
   );
 }

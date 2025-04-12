@@ -16,14 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
+  ResponsiveContainer
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,25 +34,10 @@ import { Input } from "@/components/ui/input";
 import ServerNotFound from "@/components/ui/ServerNotFound";
 import "ldrs/ring";
 
-const Loader = () => (
-  <div className="w-4 h-4 border-2 border-t-2 border-blue-500 rounded-full animate-spin"></div>
-);
-
-const generateMockMetrics = () =>
-  Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`,
-    cpu: Math.random() * 100,
-    memory: Math.random() * 100,
-    network: Math.random() * 1000,
-  }));
-
 export default function AppDetails() {
-  const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const app = location.state;
-
-  const [metrics, setMetrics] = useState(generateMockMetrics);
   const [confirmAppName, setConfirmAppName] = useState("");
   const [validationError, setValidationError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -239,11 +217,10 @@ export default function AppDetails() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      app.status === "running"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                    }`}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.status === "running"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                      }`}
                   >
                     {app.status}
                   </span>
@@ -259,7 +236,7 @@ export default function AppDetails() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card allowPress={false}>
           <CardHeader>
             <CardTitle>Metrics</CardTitle>
             <CardDescription>
@@ -267,64 +244,17 @@ export default function AppDetails() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="cpu" className="space-y-4">
+            <Tabs defaultValue="metrics" className="space-y-4">
               <TabsList>
-                <TabsTrigger value="cpu">CPU Usage</TabsTrigger>
-                <TabsTrigger value="memory">Memory Usage</TabsTrigger>
-                <TabsTrigger value="network">Network Load</TabsTrigger>
+                <TabsTrigger value="metrics">Metrics</TabsTrigger>
               </TabsList>
-              <TabsContent value="cpu" className="h-[400px]">
+              <TabsContent value="metrics" className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={metrics}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis unit="%" />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="cpu"
-                      stroke="hsl(var(--chart-1))"
-                      name="CPU Usage"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </TabsContent>
-              <TabsContent value="memory" className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={metrics}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis unit="%" />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="memory"
-                      stroke="hsl(var(--chart-2))"
-                      name="Memory Usage"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </TabsContent>
-              <TabsContent value="network" className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={metrics}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis unit="KB/s" />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="network"
-                      stroke="hsl(var(--chart-3))"
-                      name="Network Load"
-                    />
-                  </LineChart>
+                  <iframe src={`http://localhost:3000/d-solo/aLuzOYANk?orgId=1&var-app_name=${app.swarm_task_name}&refresh=5s&theme=light&panelId=6`} width="450" height="200" frameborder="0"></iframe>
                 </ResponsiveContainer>
               </TabsContent>
             </Tabs>
+
           </CardContent>
         </Card>
       </div>

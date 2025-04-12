@@ -200,7 +200,6 @@ export default function CreateApp() {
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      console.log("WebSocket message received:", message);
 
       if (message.status === "in_progress") {
         setVisibleSteps((prev) => [...prev, message.step]);
@@ -347,7 +346,7 @@ export default function CreateApp() {
                       </div>
                       <Button
                         onClick={() =>
-                          navigate(`/apps/${appData.container_id}`, {
+                          navigate(`/apps/${appData.swarm_task_name}`, {
                             state: appData,
                           })
                         }
