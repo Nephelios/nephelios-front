@@ -1,5 +1,5 @@
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { z } from "zod";
 import {
   ArrowLeftIcon,
@@ -14,10 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  ResponsiveContainer
-} from "recharts";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -33,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import ServerNotFound from "@/components/ui/ServerNotFound";
 import "ldrs/ring";
+import AppMetrics from "@/components/app-metrics";
 
 export default function AppDetails() {
   const navigate = useNavigate();
@@ -50,24 +47,6 @@ export default function AppDetails() {
         message: "App name does not match. Deletion aborted.",
       }),
   });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMetrics((prevMetrics) => {
-        const newMetrics = [...prevMetrics];
-        newMetrics.push({
-          time: `${newMetrics.length - 1}:00`,
-          cpu: Math.random() * 100,
-          memory: Math.random() * 100,
-          network: Math.random() * 1000,
-        });
-        newMetrics.shift();
-        return newMetrics;
-      });
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const handleDelete = async (e: any) => {
     e.preventDefault();
@@ -236,27 +215,7 @@ export default function AppDetails() {
           </CardContent>
         </Card>
 
-        <Card allowPress={false}>
-          <CardHeader>
-            <CardTitle>Metrics</CardTitle>
-            <CardDescription>
-              Real-time performance metrics for your application
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="metrics" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="metrics">Metrics</TabsTrigger>
-              </TabsList>
-              <TabsContent value="metrics" className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <iframe src={`http://localhost:3000/d-solo/aLuzOYANk?orgId=1&var-app_name=${app.swarm_task_name}&refresh=5s&theme=light&panelId=6`} width="450" height="200" frameborder="0"></iframe>
-                </ResponsiveContainer>
-              </TabsContent>
-            </Tabs>
-
-          </CardContent>
-        </Card>
+        <AppMetrics app={app} />
       </div>
     </div>
   );

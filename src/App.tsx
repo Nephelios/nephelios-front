@@ -40,7 +40,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               <Link
                 to="/monitor"
               >
-                Monitor your apps
+                Monitor nephelios
               </Link>
             </Button>
           )}
