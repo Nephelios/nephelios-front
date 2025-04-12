@@ -61,7 +61,9 @@ const formSchema = z.object({
     ),
   app_type: z.string().nonempty("Application type is required"),
   github_url: z.string().url("Invalid GitHub URL"),
-  start_command: z.string().optional(),
+  app_workdir: z.string().optional(),
+  build_command: z.string().optional(),
+  run_command: z.string().optional(),
   install_command: z.string().optional(),
   additionalInputs: z
     .array(
@@ -89,6 +91,9 @@ export default function CreateApp() {
   const [isEnvVariablesOpen, setIsEnvVariablesOpen] = useState(false);
   const navigate = useNavigate();
   const [isStartCommandEditable, setisStartCommandEditable] = useState(false);
+  const [isBuildCommandEditable, setIsBuildCommandEditable] =
+    useState(false);
+  const [isWorkdirEditable, setIsWorkdirEditable] = useState(false);
   const [isInstallCommandEditable, setIsInstallCommandEditable] =
     useState(false);
 
@@ -98,8 +103,10 @@ export default function CreateApp() {
       app_name: "",
       app_type: "",
       github_url: "",
-      start_command: "bun start",
-      install_command: "bun install",
+      app_workdir: "/",
+      build_command: "npm run build",
+      run_command: "npm run start",
+      install_command: "npm install",
       additionalInputs: [],
     },
   });
@@ -266,11 +273,10 @@ export default function CreateApp() {
                           )}
                         </div>
                         <span
-                          className={`transition-colors duration-500 ${
-                            completedSteps.has(step)
-                              ? "text-gray-400"
-                              : "text-black font-bold"
-                          }`}
+                          className={`transition-colors duration-500 ${completedSteps.has(step)
+                            ? "text-gray-400"
+                            : "text-black font-bold"
+                            }`}
                         >
                           {step}
                         </span>
@@ -327,11 +333,10 @@ export default function CreateApp() {
                       </div>
                       <div className="flex items-center justify-between mt-4">
                         <div
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            appData.status === "running"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                          }`}
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${appData.status === "running"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                            }`}
                         >
                           {appData.status}
                         </div>
@@ -442,21 +447,66 @@ export default function CreateApp() {
                           <CollapsibleTrigger className="flex w-full items-center justify-between p-4 transition-transform duration-300">
                             <div className="flex items-center gap-2 font-medium">
                               <ChevronDownIcon
-                                className={`h-4 w-4 transform transition-transform duration-300 ${
-                                  isBuildSettingsOpen ? "rotate-180" : ""
-                                }`}
+                                className={`h-4 w-4 transform transition-transform duration-300 ${isBuildSettingsOpen ? "rotate-180" : ""
+                                  }`}
                               />
                               Install and Start Settings
                             </div>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="px-4 pb-4 pt-0 space-y-4 transition-transform duration-300 transform">
+
                             <FormField
                               control={form.control}
-                              name="start_command"
+                              name="app_workdir"
                               render={({ field }) => (
                                 <FormItem>
                                   <div className="flex items-center justify-between">
-                                    <FormLabel>Start Command</FormLabel>
+                                    <FormLabel>Working Directory</FormLabel>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <FormDescription className="mt-0 mr-1">
+                                        ⓘ
+                                      </FormDescription>
+                                    </div>
+                                  </div>
+                                  <div className="relative">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="/"
+                                        {...field}
+                                        readOnly={!isWorkdirEditable}
+                                        className={`${!isWorkdirEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-2 top-2 h-5 w-5 text-muted-foreground"
+                                      onClick={() =>
+                                        setIsWorkdirEditable(
+                                          !isWorkdirEditable
+                                        )
+                                      }
+                                    >
+                                      <span>
+                                        <Pencil1Icon className="h-4 w-4" />
+                                      </span>
+                                    </Button>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="run_command"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Run Command</FormLabel>
                                     <div className="flex items-center text-sm text-muted-foreground">
                                       <FormDescription className="mt-0 mr-1">
                                         ⓘ
@@ -469,11 +519,10 @@ export default function CreateApp() {
                                         placeholder="'yarn start', 'bun start' ..."
                                         {...field}
                                         readOnly={!isStartCommandEditable}
-                                        className={`${
-                                          !isStartCommandEditable
-                                            ? "cursor-not-allowed bg-gray-100"
-                                            : ""
-                                        }`}
+                                        className={`${!isStartCommandEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
                                       />
                                     </FormControl>
                                     <Button
@@ -496,7 +545,6 @@ export default function CreateApp() {
                                 </FormItem>
                               )}
                             />
-
                             <FormField
                               control={form.control}
                               name="install_command"
@@ -514,13 +562,12 @@ export default function CreateApp() {
                                     <FormControl>
                                       <Input
                                         placeholder="'yarn install', 'pnpm install', 'npm install', 'bun install' ..."
-                                        readOnly={!isInstallCommandEditable}
-                                        className={`${
-                                          !isInstallCommandEditable
-                                            ? "cursor-not-allowed bg-gray-100"
-                                            : ""
-                                        }`}
                                         {...field}
+                                        readOnly={!isInstallCommandEditable}
+                                        className={`${!isInstallCommandEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
                                       />
                                     </FormControl>
                                     <Button
@@ -531,6 +578,51 @@ export default function CreateApp() {
                                       onClick={() =>
                                         setIsInstallCommandEditable(
                                           !isInstallCommandEditable
+                                        )
+                                      }
+                                    >
+                                      <span>
+                                        <Pencil1Icon className="h-4 w-4" />
+                                      </span>
+                                    </Button>
+                                  </div>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="build_command"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Build Command</FormLabel>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <FormDescription className="mt-0 mr-1">
+                                        ⓘ
+                                      </FormDescription>
+                                    </div>
+                                  </div>
+                                  <div className="relative">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="'yarn build', 'pnpm build', 'npm build', 'bun build' ..."
+                                        readOnly={!isBuildCommandEditable}
+                                        className={`${!isBuildCommandEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-2 top-2 h-5 w-5 text-muted-foreground"
+                                      onClick={() =>
+                                        setIsBuildCommandEditable(
+                                          !isBuildCommandEditable
                                         )
                                       }
                                     >
@@ -554,9 +646,8 @@ export default function CreateApp() {
                           <CollapsibleTrigger className="flex w-full items-center justify-between p-4">
                             <div className="flex items-center gap-2 font-medium">
                               <ChevronDownIcon
-                                className={`h-4 w-4 transform transition-transform duration-300 ${
-                                  isEnvVariablesOpen ? "rotate-180" : ""
-                                }`}
+                                className={`h-4 w-4 transform transition-transform duration-300 ${isEnvVariablesOpen ? "rotate-180" : ""
+                                  }`}
                               />
                               Environment Variables
                             </div>
