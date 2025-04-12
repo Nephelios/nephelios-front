@@ -7,6 +7,9 @@ import {
   GlobeIcon,
   RocketIcon,
   CheckIcon,
+  PlusIcon,
+  Pencil1Icon,
+  ChevronDownIcon,
 } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +26,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,6 +36,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import ServerNotFound from "@/components/ui/ServerNotFound";
@@ -41,6 +50,7 @@ import { Progress } from "@/components/ui/progress";
 
 const dockerImageNameRegex = /^[a-z0-9._-]+$/;
 
+// Extended schema with build settings
 const formSchema = z.object({
   app_name: z
     .string()
@@ -51,7 +61,20 @@ const formSchema = z.object({
     ),
   app_type: z.string().nonempty("Application type is required"),
   github_url: z.string().url("Invalid GitHub URL"),
+  app_workdir: z.string().optional(),
+  build_command: z.string().optional(),
+  run_command: z.string().optional(),
+  install_command: z.string().optional(),
+  additionalInputs: z
+    .array(
+      z.object({
+        key: z.string().optional(),
+        value: z.string().optional(),
+      })
+    )
+    .optional(),
 });
+
 import "ldrs/ring";
 import "ldrs/leapfrog";
 
@@ -59,23 +82,64 @@ export default function CreateApp() {
   const { toast } = useToast();
   const [isDeploying, setIsDeploying] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [appData, setAppData] = useState<any>(null);
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
-  const [visibleSteps, setVisibleSteps] = useState<string[]>([]);
+  const [error, setError] = useState(null);
+  const [appData, setAppData] = useState(null);
+  const [completedSteps, setCompletedSteps] = useState(new Set());
+  const [visibleSteps, setVisibleSteps] = useState([]);
+  const [additionalInputs, setAdditionalInputs] = useState([]);
+  const [isBuildSettingsOpen, setIsBuildSettingsOpen] = useState(false);
+  const [isEnvVariablesOpen, setIsEnvVariablesOpen] = useState(false);
   const navigate = useNavigate();
+  const [isStartCommandEditable, setisStartCommandEditable] = useState(false);
+  const [isBuildCommandEditable, setIsBuildCommandEditable] =
+    useState(false);
+  const [isWorkdirEditable, setIsWorkdirEditable] = useState(false);
+  const [isInstallCommandEditable, setIsInstallCommandEditable] =
+    useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       app_name: "",
       app_type: "",
       github_url: "",
+      app_workdir: "/",
+      build_command: "npm run build",
+      run_command: "npm run start",
+      install_command: "npm install",
+      additionalInputs: [],
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const addNewInput = () => {
+    setAdditionalInputs([...additionalInputs, { key: "", value: "" }]);
+  };
+
+  const removeInput = (index) => {
+    const updatedInputs = [...additionalInputs];
+    updatedInputs.splice(index, 1);
+    setAdditionalInputs(updatedInputs);
+  };
+
+  const updateInputValue = (index, field, value) => {
+    const updatedInputs = [...additionalInputs];
+    updatedInputs[index][field] = value;
+    setAdditionalInputs(updatedInputs);
+
+    // Update the form values
+    const currentValues = form.getValues();
+    currentValues.additionalInputs = updatedInputs;
+    form.setValue("additionalInputs", updatedInputs);
+  };
+
+  async function onSubmit(values) {
     setIsDeploying(true);
+
+    const submissionData = {
+      ...values,
+      additionalInputs: values.additionalInputs || additionalInputs,
+    };
+
     try {
       const backendUrl =
         process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
@@ -88,7 +152,7 @@ export default function CreateApp() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
@@ -142,26 +206,29 @@ export default function CreateApp() {
         setVisibleSteps((prev) => [...prev, message.step]);
       } else if (message.status === "success") {
         setCompletedSteps((prev) => new Set(prev.add(message.step)));
-
-      } else if (message.status === "deployed" && message.step === "deployed_info") {
+      } else if (
+        message.status === "deployed" &&
+        message.step === "deployed_info"
+      ) {
         setTimeout(() => {
           ws.close();
           setVisibleSteps([]);
           setCompletedSteps(new Set());
           setAppData(message.app_deployed);
-          console.log(message.app_deployed)
           setShowConfetti(true);
           setIsDeploying(false);
         }, 2000);
-
-
       }
-    }
+    };
 
-    ws.onclose = () => console.log("WebSocket   disconnected");
+    ws.onclose = () => console.log("WebSocket disconnected");
     ws.onerror = (error) => console.error("WebSocket error:", error);
 
-    return () => {};
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
   }, []);
 
   const deploymentSteps = [
@@ -206,11 +273,10 @@ export default function CreateApp() {
                           )}
                         </div>
                         <span
-                          className={`transition-colors duration-500 ${
-                            completedSteps.has(step)
-                              ? "text-gray-400"
-                              : "text-black font-bold"
-                          }`}
+                          className={`transition-colors duration-500 ${completedSteps.has(step)
+                            ? "text-gray-400"
+                            : "text-black font-bold"
+                            }`}
                         >
                           {step}
                         </span>
@@ -267,11 +333,10 @@ export default function CreateApp() {
                       </div>
                       <div className="flex items-center justify-between mt-4">
                         <div
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            appData.status === "running"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                          }`}
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${appData.status === "running"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                            }`}
                         >
                           {appData.status}
                         </div>
@@ -347,8 +412,6 @@ export default function CreateApp() {
                                     Node.js
                                   </SelectItem>
                                   <SelectItem value="python">Python</SelectItem>
-                                  <SelectItem value="go">Go</SelectItem>
-                                  <SelectItem value="rust">Rust</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -375,6 +438,283 @@ export default function CreateApp() {
                             </FormItem>
                           )}
                         />
+
+                        <Collapsible
+                          open={isBuildSettingsOpen}
+                          onOpenChange={setIsBuildSettingsOpen}
+                          className="border rounded-md"
+                        >
+                          <CollapsibleTrigger className="flex w-full items-center justify-between p-4 transition-transform duration-300">
+                            <div className="flex items-center gap-2 font-medium">
+                              <ChevronDownIcon
+                                className={`h-4 w-4 transform transition-transform duration-300 ${isBuildSettingsOpen ? "rotate-180" : ""
+                                  }`}
+                              />
+                              Advanced Build Settings
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 pb-4 pt-0 space-y-4 transition-transform duration-300 transform">
+
+                            <FormField
+                              control={form.control}
+                              name="app_workdir"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Working Directory</FormLabel>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <FormDescription className="mt-0 mr-1">
+                                        ⓘ
+                                      </FormDescription>
+                                    </div>
+                                  </div>
+                                  <div className="relative">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="/"
+                                        {...field}
+                                        readOnly={!isWorkdirEditable}
+                                        className={`${!isWorkdirEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-2 top-2 h-5 w-5 text-muted-foreground"
+                                      onClick={() =>
+                                        setIsWorkdirEditable(
+                                          !isWorkdirEditable
+                                        )
+                                      }
+                                    >
+                                      <span>
+                                        <Pencil1Icon className="h-4 w-4" />
+                                      </span>
+                                    </Button>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="run_command"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Run Command</FormLabel>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <FormDescription className="mt-0 mr-1">
+                                        ⓘ
+                                      </FormDescription>
+                                    </div>
+                                  </div>
+                                  <div className="relative">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="'yarn start', 'bun start' ..."
+                                        {...field}
+                                        readOnly={!isStartCommandEditable}
+                                        className={`${!isStartCommandEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-2 top-2 h-5 w-5 text-muted-foreground"
+                                      onClick={() =>
+                                        setisStartCommandEditable(
+                                          !isStartCommandEditable
+                                        )
+                                      }
+                                    >
+                                      <span>
+                                        <Pencil1Icon />
+                                      </span>
+                                    </Button>
+                                  </div>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="install_command"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Install Command</FormLabel>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <FormDescription className="mt-0 mr-1">
+                                        ⓘ
+                                      </FormDescription>
+                                    </div>
+                                  </div>
+                                  <div className="relative">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="'yarn install', 'pnpm install', 'npm install', 'bun install' ..."
+                                        {...field}
+                                        readOnly={!isInstallCommandEditable}
+                                        className={`${!isInstallCommandEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-2 top-2 h-5 w-5 text-muted-foreground"
+                                      onClick={() =>
+                                        setIsInstallCommandEditable(
+                                          !isInstallCommandEditable
+                                        )
+                                      }
+                                    >
+                                      <span>
+                                        <Pencil1Icon className="h-4 w-4" />
+                                      </span>
+                                    </Button>
+                                  </div>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="build_command"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Build Command</FormLabel>
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <FormDescription className="mt-0 mr-1">
+                                        ⓘ
+                                      </FormDescription>
+                                    </div>
+                                  </div>
+                                  <div className="relative">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="'yarn build', 'pnpm build', 'npm build', 'bun build' ..."
+                                        readOnly={!isBuildCommandEditable}
+                                        className={`${!isBuildCommandEditable
+                                          ? "cursor-not-allowed bg-gray-100"
+                                          : ""
+                                          }`}
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="absolute right-2 top-2 h-5 w-5 text-muted-foreground"
+                                      onClick={() =>
+                                        setIsBuildCommandEditable(
+                                          !isBuildCommandEditable
+                                        )
+                                      }
+                                    >
+                                      <span>
+                                        <Pencil1Icon className="h-4 w-4" />
+                                      </span>
+                                    </Button>
+                                  </div>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        <Collapsible
+                          open={isEnvVariablesOpen}
+                          onOpenChange={setIsEnvVariablesOpen}
+                          className="border rounded-md"
+                        >
+                          <CollapsibleTrigger className="flex w-full items-center justify-between p-4">
+                            <div className="flex items-center gap-2 font-medium">
+                              <ChevronDownIcon
+                                className={`h-4 w-4 transform transition-transform duration-300 ${isEnvVariablesOpen ? "rotate-180" : ""
+                                  }`}
+                              />
+                              Environment Variables
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 pb-4 pt-0 space-y-4">
+                            {additionalInputs.map((input, index) => (
+                              <div
+                                key={index}
+                                className="grid grid-cols-2 gap-4"
+                              >
+                                <FormItem>
+                                  <FormLabel>Key</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="EXAMPLE_NAME"
+                                      value={input.key}
+                                      onChange={(e) =>
+                                        updateInputValue(
+                                          index,
+                                          "key",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                                <div className="flex items-end gap-2">
+                                  <FormItem className="flex-1">
+                                    <FormLabel>Value</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Value"
+                                        value={input.value}
+                                        onChange={(e) =>
+                                          updateInputValue(
+                                            index,
+                                            "value",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="mb-1"
+                                    onClick={() => removeInput(index)}
+                                  >
+                                    −
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              onClick={addNewInput}
+                            >
+                              <PlusIcon className="mr-2 h-4 w-4" />
+                              Add More
+                            </Button>
+                          </CollapsibleContent>
+                        </Collapsible>
+
                         <Button
                           type="submit"
                           className="w-full"
