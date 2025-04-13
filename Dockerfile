@@ -23,5 +23,5 @@ FROM base
 ENV NODE_ENV=production
 COPY --from=production-deps /app/node_modules /app/node_modules
 COPY --from=build /app/dist /app/dist
-EXPOSE 80
-CMD [ "http-server", "dist", "-p", "80" ]
+EXPOSE 4173
+CMD [ "http-server", "dist", "-p", "4173" ]
