@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import "ldrs/ring";
+import "ldrs/leapfrog";
 import {
   GitHubLogoIcon,
   GlobeIcon,
@@ -75,29 +77,38 @@ const formSchema = z.object({
     .optional(),
 });
 
-import "ldrs/ring";
-import "ldrs/leapfrog";
+interface AppData {
+  swarm_task_name: string;
+  domain: string;
+  github_url: string;
+  status: string;
+  created_at: string;
+}
+
+const DEPLOYMENT_STEPS = [
+  "Cloning repository",
+  "Building Docker image",
+  "Starting deployment",
+];
 
 export default function CreateApp() {
   const { toast } = useToast();
   const [isDeploying, setIsDeploying] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [error, setError] = useState(null);
-  const [appData, setAppData] = useState(null);
-  const [completedSteps, setCompletedSteps] = useState(new Set());
-  const [visibleSteps, setVisibleSteps] = useState([]);
-  const [additionalInputs, setAdditionalInputs] = useState([]);
+  const [error, setError] = useState<string | null>(null);
+  const [appData, setAppData] = useState<AppData | null>(null);
+  const [completedSteps, setCompletedSteps] = useState(new Set<string>());
+  const [visibleSteps, setVisibleSteps] = useState<string[]>([]);
+  const [additionalInputs, setAdditionalInputs] = useState<Array<{ key: string, value: string }>>([]);
   const [isBuildSettingsOpen, setIsBuildSettingsOpen] = useState(false);
   const [isEnvVariablesOpen, setIsEnvVariablesOpen] = useState(false);
   const navigate = useNavigate();
   const [isStartCommandEditable, setisStartCommandEditable] = useState(false);
-  const [isBuildCommandEditable, setIsBuildCommandEditable] =
-    useState(false);
+  const [isBuildCommandEditable, setIsBuildCommandEditable] = useState(false);
   const [isWorkdirEditable, setIsWorkdirEditable] = useState(false);
-  const [isInstallCommandEditable, setIsInstallCommandEditable] =
-    useState(false);
-
-  const form = useForm({
+  const [isInstallCommandEditable, setIsInstallCommandEditable] = useState(false);
+  console.log(appData)
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       app_name: "",
@@ -115,24 +126,25 @@ export default function CreateApp() {
     setAdditionalInputs([...additionalInputs, { key: "", value: "" }]);
   };
 
-  const removeInput = (index) => {
+  const removeInput = (index: number) => {
     const updatedInputs = [...additionalInputs];
     updatedInputs.splice(index, 1);
     setAdditionalInputs(updatedInputs);
   };
 
-  const updateInputValue = (index, field, value) => {
+  const updateInputValue = (index: number, field: string, value: string) => {
     const updatedInputs = [...additionalInputs];
-    updatedInputs[index][field] = value;
+    updatedInputs[index][field as keyof typeof updatedInputs[0]] = value;
     setAdditionalInputs(updatedInputs);
 
     // Update the form values
     const currentValues = form.getValues();
-    currentValues.additionalInputs = updatedInputs;
-    form.setValue("additionalInputs", updatedInputs);
+    // Use type assertion to fix type error
+    (currentValues as any).additionalInputs = updatedInputs;
+    form.setValue("additionalInputs", updatedInputs as any);
   };
 
-  async function onSubmit(values) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsDeploying(true);
 
     const submissionData = {
@@ -164,7 +176,7 @@ export default function CreateApp() {
         throw new Error("Failed to create app");
       }
 
-      const data = await response.json();
+      await response.json(); // Parse but don't need to store
       setShowConfetti(true);
       toast({
         title: "Deployment Started",
@@ -177,7 +189,13 @@ export default function CreateApp() {
         throw new Error("Failed to fetch apps");
       }
 
-      const appsData = await appsResponse.json();
+      // Get the app data and set it
+      const fetchedApps = await appsResponse.json();
+      // Find the app that was just created
+      const createdApp = fetchedApps.find((app: any) => app.app_name === values.app_name);
+      if (createdApp) {
+        setAppData(createdApp);
+      }
     } catch (error) {
       if (error instanceof Error) {
         toast({
@@ -188,6 +206,31 @@ export default function CreateApp() {
       }
     }
   }
+
+  useEffect(() => {
+    if (appData) {
+      // Setup WebSocket connection
+      const backendUrl = process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "localhost";
+      const backendPort = process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+      const ws = new WebSocket(`ws://${backendUrl}:${backendPort}/ws/${appData.swarm_task_name}`);
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.step) {
+          setCompletedSteps((prev) => {
+            const newSet = new Set(prev);
+            newSet.add(message.step);
+            return newSet;
+          });
+          setVisibleSteps((prev: string[]) => [...prev, message.step]);
+        }
+      };
+
+      return () => {
+        ws.close();
+      };
+    }
+  }, [appData]);
 
   useEffect(() => {
     const backendUrl =
@@ -202,7 +245,7 @@ export default function CreateApp() {
       const message = JSON.parse(event.data);
 
       if (message.status === "in_progress") {
-        setVisibleSteps((prev) => [...prev, message.step]);
+        setVisibleSteps((prev: string[]) => [...prev, message.step]);
       } else if (message.status === "success") {
         setCompletedSteps((prev) => new Set(prev.add(message.step)));
       } else if (
@@ -230,12 +273,6 @@ export default function CreateApp() {
     };
   }, []);
 
-  const deploymentSteps = [
-    "Cloning repository",
-    "Building Docker image",
-    "Starting deployment",
-  ];
-
   return (
     <div className="container mx-auto py-10">
       {error ? (
@@ -254,35 +291,46 @@ export default function CreateApp() {
               </h2>
 
               <div className="mt-8 space-y-4 flex flex-col">
-                {deploymentSteps.map((step, index) =>
-                  visibleSteps.includes(step) ? (
-                    <div key={index} className="flex items-center">
-                      <div className="flex items-center">
-                        <div className="mr-2">
-                          {completedSteps.has(step) ? (
-                            <CheckIcon className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <l-ring
-                              size="15"
-                              stroke="2"
-                              bg-opacity="0"
-                              speed="2"
-                              color="black"
-                            ></l-ring>
-                          )}
-                        </div>
-                        <span
-                          className={`transition-colors duration-500 ${completedSteps.has(step)
-                            ? "text-gray-400"
-                            : "text-black font-bold"
-                            }`}
-                        >
-                          {step}
-                        </span>
-                      </div>
+                {DEPLOYMENT_STEPS.map((step) => (
+                  <div
+                    key={step}
+                    className="flex items-center mb-2 last:mb-0 relative"
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${completedSteps.has(step)
+                        ? "bg-green-500"
+                        : "bg-gray-200"
+                        }`}
+                    >
+                      {completedSteps.has(step) && (
+                        <CheckIcon className="text-white w-3 h-3" />
+                      )}
                     </div>
-                  ) : null
-                )}
+                    <div className="flex-1">
+                      <p
+                        className={`text-sm ${completedSteps.has(step)
+                          ? "text-green-600 font-medium"
+                          : "text-gray-600"
+                          }`}
+                      >
+                        {step}
+                      </p>
+                    </div>
+                    {isDeploying &&
+                      !completedSteps.has(step) &&
+                      visibleSteps.includes(step) ? (
+                      <div className="flex items-center ml-2">
+                        <l-ring
+                          size="15"
+                          stroke="2"
+                          bg-opacity="0"
+                          speed="2"
+                          color="black"
+                        ></l-ring>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
@@ -307,53 +355,56 @@ export default function CreateApp() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <GlobeIcon className="h-4 w-4 text-muted-foreground" />
-                        <a
-                          href={`https://${appData.domain}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm hover:underline"
-                        >
-                          {appData.domain}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <GitHubLogoIcon className="h-4 w-4 text-muted-foreground" />
-                        <a
-                          href={appData.github_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm hover:underline"
-                        >
-                          View Repository
-                        </a>
-                      </div>
-                      <div className="flex items-center justify-between mt-4">
-                        <div
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${appData.status === "running"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                            }`}
-                        >
-                          {appData.status}
+                    <div className="flex justify-between">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <GlobeIcon className="h-5 w-5 text-blue-500" />
+                          <a
+                            className="text-blue-500 hover:underline"
+                            href={`https://${appData.domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {appData.domain}
+                          </a>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          Created at:{" "}
-                          {new Date(appData.created_at).toLocaleDateString()}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <GitHubLogoIcon className="h-5 w-5" />
+                          <a
+                            className="text-blue-500 hover:underline"
+                            href={appData.github_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {appData.github_url.replace("https://github.com/", "")}
+                          </a>
+                        </div>
                       </div>
-                      <Button
-                        onClick={() =>
-                          navigate(`/apps/${appData.swarm_task_name}`, {
-                            state: appData,
-                          })
-                        }
-                        className="w-full"
-                      >
-                        View Application
-                      </Button>
+                      <div className="flex flex-col space-y-2 justify-end">
+                        <div className="text-sm text-gray-500">
+                          Created on {new Date(appData.created_at).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${appData.status === "running"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                              }`}
+                          >
+                            {appData.status}
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() =>
+                            navigate(`/apps/${appData.swarm_task_name}`, {
+                              state: appData,
+                            })
+                          }
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -729,7 +780,8 @@ export default function CreateApp() {
             </>
           )}
         </>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }

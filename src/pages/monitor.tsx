@@ -1,6 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { App } from "./dashboard";
 import AppMetrics from "@/components/app-metrics";
+import { App } from "./dashboard";
 
 export default function Monitor() {
     const app: App = {
