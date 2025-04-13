@@ -1,0 +1,6 @@
+**.md
+node_modules
+.gitignore
+.idea
+.github
+.vscode
