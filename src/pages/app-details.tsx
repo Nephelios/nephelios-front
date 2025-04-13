@@ -230,7 +230,7 @@ export default function AppDetails() {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                  <Button variant={"primary"} size={"sm"} className="bg-blue-500 hover:bg-blue-600">
+                  <Button variant={"default"} size={"sm"} className="bg-blue-500 hover:bg-blue-600">
                     <StopIcon width={20} height={20} />
                   </Button>
                   </AlertDialogTrigger>
@@ -282,7 +282,7 @@ export default function AppDetails() {
                 </AlertDialog>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                  <Button variant={"primary"} size={"sm"} className="bg-green-500 hover:bg-green-600">
+                  <Button variant={"default"} size={"sm"} className="bg-green-500 hover:bg-green-600">
                     <Play width={20} height={20} />
                   </Button>
                   </AlertDialogTrigger>
