@@ -1,0 +1,58 @@
+name: Nephelios-Front CI Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Validate package.json version (without jq)
+        run: |
+          FILE_VERSION=$(grep '"version"' package.json | head -1 | cut -d '"' -f4)
+          if [ "$FILE_VERSION" != "$VERSION" ]; then
+            echo "❌ package.json version ($FILE_VERSION) does not match tag version ($VERSION)"
+            exit 1
+          else
+            echo "✅ package.json version matches tag version ($VERSION)"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container # Utilisation du bon driver pour gérer le cache
+
+      - name: Dockerhub login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_NEPHELIOS_FRONT_USER }}
+          password: ${{ secrets.DOCKER_NEPHELIOS_FRONT_TOKEN }}
+
+      - name: Build Docker image
+        id: build-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            zuhowks/nephelios-front:${{ env.VERSION }}
+            zuhowks/nephelios-front:latest
+          cache-from: type=gha
+          github-token: ${{ secrets.TOKEN_GITHUB }}
