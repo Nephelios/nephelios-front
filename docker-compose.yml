@@ -1,0 +1,6 @@
+services:
+  nephelios-front:
+    container_name: nephelios-front
+    build: .
+    ports:
+      - "80:80"
