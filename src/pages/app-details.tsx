@@ -1,10 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { z } from "zod";
+import {Play} from "lucide-react";
 import {
   ArrowLeftIcon,
   GitHubLogoIcon,
   GlobeIcon,
+  StopIcon,
   TrashIcon,
 } from "@radix-ui/react-icons";
 import {
@@ -47,6 +49,81 @@ export default function AppDetails() {
         message: "App name does not match. Deletion aborted.",
       }),
   });
+
+  const handleStart = async (e: any) => {
+    e.preventDefault();
+    const result = appNameSchema.safeParse({ confirmAppName });
+    if (result.success) {
+      setIsLoading(true);
+      const backendUrl =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
+      const backendPort =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+      const url = `${backendUrl}:${backendPort}/start`;
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ app_name: app.app_name }),
+        });
+        if (response.ok) {
+          app.status = "running";
+          setValidationError(""); 
+          navigate("/");
+        } else {
+          app.status = "stopped";
+          setValidationError("An error occurred while starting the app.");
+        }
+      } catch (error) {
+        app.status = "stopped";
+        setValidationError("An error occurred while starting the app.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setValidationError(result.error.errors[0].message);
+    }
+  };
+
+  const handleStop = async (e: any) => {
+    e.preventDefault();
+    const result = appNameSchema.safeParse({ confirmAppName });
+    if (result.success) {
+      setIsLoading(true);
+      const backendUrl =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_URL || "http://localhost";
+      const backendPort =
+        process.env.REACT_APP_NEPHELIOS_BACKEND_PORT || "3030";
+      const url = `${backendUrl}:${backendPort}/stop`;
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ app_name: app.app_name }),
+        });
+  
+        if (response.ok) {
+          app.status = "stopping";
+          setValidationError(""); 
+          navigate("/");
+        } else {
+          app.status = "running";
+          setValidationError("An error occurred while stopping the app.");
+        }
+      } catch (error) {
+        app.status = "running";
+        setValidationError("An error occurred while stopping the app.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setValidationError(result.error.errors[0].message);
+    }
+  };
 
   const handleDelete = async (e: any) => {
     e.preventDefault();
@@ -145,6 +222,111 @@ export default function AppDetails() {
                           </div>
                         ) : (
                           "Delete"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                  <Button variant={"primary"} size={"sm"} className="bg-blue-500 hover:bg-blue-600">
+                    <StopIcon width={20} height={20} />
+                  </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will stop the <strong>{app.app_name}</strong> application.
+                      </AlertDialogDescription>
+                      <Input
+                        placeholder={`Type "${app.app_name}" to confirm`}
+                        value={confirmAppName}
+                        onChange={(e) => setConfirmAppName(e.target.value)}
+                        className="mt-4"
+                      />
+                      {validationError && (
+                        <p className="text-blue-500 text-sm mt-2">
+                          {validationError}
+                        </p>
+                      )}
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setConfirmAppName("")}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleStop}
+                        disabled={confirmAppName !== app.app_name || isLoading}
+                        className="bg-blue-500 hover:bg-blue-600"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center">
+                            <l-ring
+                              size="15"
+                              stroke="2"
+                              bg-opacity="0"
+                              speed="2"
+                              color="black"
+                            ></l-ring>
+                          </div>
+                        ) : (
+                          "Stop"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                  <Button variant={"primary"} size={"sm"} className="bg-green-500 hover:bg-green-600">
+                    <Play width={20} height={20} />
+                  </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will start the <strong>{app.app_name}</strong> application.
+                      </AlertDialogDescription>
+                      <Input
+                        placeholder={`Type "${app.app_name}" to confirm`}
+                        value={confirmAppName}
+                        onChange={(e) => setConfirmAppName(e.target.value)}
+                        className="mt-4"
+                      />
+                      {validationError && (
+                        <p className="text-green-500 text-sm mt-2">
+                          {validationError}
+                        </p>
+                      )}
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setConfirmAppName("")}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleStart}
+                        disabled={confirmAppName !== app.app_name || isLoading}
+                        className="bg-green-500 hover:bg-green-600"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center">
+                            <l-ring
+                              size="15"
+                              stroke="2"
+                              bg-opacity="0"
+                              speed="2"
+                              color="black"
+                            ></l-ring>
+                          </div>
+                        ) : (
+                          "Start"
                         )}
                       </AlertDialogAction>
                     </AlertDialogFooter>
