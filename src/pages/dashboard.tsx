@@ -156,15 +156,14 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <div
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      app.status === "running"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                        : app.status === "stopping"
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.status === "running"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      : app.status === "stopping"
                         ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                         : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
-                    }`}
+                      }`}
                   >
-                    {app.status}
+                    {app.status === "running" ? "Running" : app.status === "stopping" ? "Paused" : app.status}
                   </div>
                   <span className="text-xs text-muted-foreground">
                     Created at: {new Date(app.created_at).toLocaleDateString()}
