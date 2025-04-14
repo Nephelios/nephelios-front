@@ -1,13 +1,13 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { z } from "zod";
-import {Play} from "lucide-react";
 import {
   ArrowLeftIcon,
   GitHubLogoIcon,
   GlobeIcon,
-  StopIcon,
   TrashIcon,
+  PlayIcon,
+  PauseIcon,
 } from "@radix-ui/react-icons";
 import {
   Card,
@@ -70,7 +70,7 @@ export default function AppDetails() {
         });
         if (response.ok) {
           app.status = "running";
-          setValidationError(""); 
+          setValidationError("");
           navigate("/");
         } else {
           app.status = "stopped";
@@ -87,7 +87,7 @@ export default function AppDetails() {
     }
   };
 
-  const handleStop = async (e: any) => {
+  const handlePause = async (e: any) => {
     e.preventDefault();
     const result = appNameSchema.safeParse({ confirmAppName });
     if (result.success) {
@@ -105,10 +105,9 @@ export default function AppDetails() {
           },
           body: JSON.stringify({ app_name: app.app_name }),
         });
-  
         if (response.ok) {
-          app.status = "stopping";
-          setValidationError(""); 
+          app.status = "stopped";
+          setValidationError("");
           navigate("/");
         } else {
           app.status = "running";
@@ -116,6 +115,7 @@ export default function AppDetails() {
         }
       } catch (error) {
         app.status = "running";
+        console.error(error);
         setValidationError("An error occurred while stopping the app.");
       } finally {
         setIsLoading(false);
@@ -230,9 +230,15 @@ export default function AppDetails() {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                  <Button variant={"default"} size={"sm"} className="bg-blue-500 hover:bg-blue-600">
-                    <StopIcon width={20} height={20} />
-                  </Button>
+                    {app.status === "running" ? (
+                      <Button variant={"default"} size={"sm"} className="bg-blue-500 hover:bg-blue-600">
+                        <PauseIcon width={20} height={20} />
+                      </Button>
+                    ) : (
+                      <Button variant={"default"} size={"sm"} className="bg-green-500 hover:bg-green-600">
+                        <PlayIcon width={20} height={20} />
+                      </Button>
+                    )}
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -240,59 +246,11 @@ export default function AppDetails() {
                         Are you absolutely sure?
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will stop the <strong>{app.app_name}</strong> application.
-                      </AlertDialogDescription>
-                      <Input
-                        placeholder={`Type "${app.app_name}" to confirm`}
-                        value={confirmAppName}
-                        onChange={(e) => setConfirmAppName(e.target.value)}
-                        className="mt-4"
-                      />
-                      {validationError && (
-                        <p className="text-blue-500 text-sm mt-2">
-                          {validationError}
-                        </p>
-                      )}
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setConfirmAppName("")}>
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleStop}
-                        disabled={confirmAppName !== app.app_name || isLoading}
-                        className="bg-blue-500 hover:bg-blue-600"
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center">
-                            <l-ring
-                              size="15"
-                              stroke="2"
-                              bg-opacity="0"
-                              speed="2"
-                              color="black"
-                            ></l-ring>
-                          </div>
+                        {app.status === "running" ? (
+                          <>This will pause the <strong>{app.app_name}</strong> application.</>
                         ) : (
-                          "Stop"
+                          <>This will start the <strong>{app.app_name}</strong> application.</>
                         )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                  <Button variant={"default"} size={"sm"} className="bg-green-500 hover:bg-green-600">
-                    <Play width={20} height={20} />
-                  </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you absolutely sure?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will start the <strong>{app.app_name}</strong> application.
                       </AlertDialogDescription>
                       <Input
                         placeholder={`Type "${app.app_name}" to confirm`}
@@ -301,7 +259,7 @@ export default function AppDetails() {
                         className="mt-4"
                       />
                       {validationError && (
-                        <p className="text-green-500 text-sm mt-2">
+                        <p className={`text-sm mt-2 ${app.status === "running" ? "text-blue-500" : "text-green-500"}`}>
                           {validationError}
                         </p>
                       )}
@@ -311,9 +269,9 @@ export default function AppDetails() {
                         Cancel
                       </AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={handleStart}
+                        onClick={app.status === "running" ? handlePause : handleStart}
                         disabled={confirmAppName !== app.app_name || isLoading}
-                        className="bg-green-500 hover:bg-green-600"
+                        className={app.status === "running" ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"}
                       >
                         {isLoading ? (
                           <div className="flex items-center">
@@ -326,7 +284,7 @@ export default function AppDetails() {
                             ></l-ring>
                           </div>
                         ) : (
-                          "Start"
+                          app.status === "running" ? "Pause" : "Start"
                         )}
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -383,7 +341,7 @@ export default function AppDetails() {
                       : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
                       }`}
                   >
-                    {app.status}
+                    {app.status === "running" ? "Running" : app.status === "stopping" ? "Paused" : app.status}
                   </span>
                 </div>
                 <div className="flex justify-between">
