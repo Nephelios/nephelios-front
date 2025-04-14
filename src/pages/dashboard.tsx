@@ -47,7 +47,8 @@ export default function Dashboard() {
         throw new Error("Fetched data is not an array");
       }
 
-      setApps(data.apps);
+      const filteredApps = data.apps.filter((app: App) => app.github_url !== "https://github.com/nephelios/nephelios-front");
+      setApps(filteredApps);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
